@@ -1,0 +1,119 @@
+{% extends "inventory/base.html" %} {% block content %}
+<h1 class="h3 mb-4">Dashboard</h1>
+
+<!-- Summary cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="card shadow-sm h-100 border-warning">
+      <div class="card-body">
+        <div class="text-muted small">Needs reordering</div>
+        <div class="fs-2 fw-bold text-warning">{{ low_stock_count }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card shadow-sm h-100 border-danger">
+      <div class="card-body">
+        <div class="text-muted small">Out of stock</div>
+        <div class="fs-2 fw-bold text-danger">{{ out_of_stock_count }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Low stock table -->
+    <div class="col-lg-7">
+      <div class="card shadow-sm">
+        <div class="card-header fw-semibold">⚠️ Needs reordering</div>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle">
+            <thead>
+              <tr>
+                <th>Part</th>
+                <th>In stock</th>
+                <th>Minimum</th>
+                <th>Location</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in low_stock %}
+              <tr>
+                <td>
+                  {{ p.name }}
+                  <div class="text-muted small">{{ p.part_number }}</div>
+                </td>
+                <td>
+                  <span
+                    class="badge {% if p.total <= 0 %}bg-danger{% else %}bg-warning text-dark{% endif %}"
+                  >
+                    {{ p.total|floatformat:"-2" }} {{ p.unit }}
+                  </span>
+                </td>
+                <td>{{ p.min_level|floatformat:"-2" }}</td>
+                <td>{{ p.location|default:"-" }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted py-4">
+                  Everything is stocked 🎉
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="col-lg-5">
+      <div class="card shadow-sm h-100">
+        <div class="card-header fw-semibold">Most used (last 30 days)</div>
+        <div class="card-body"><canvas id="usageChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Recent activity -->
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header fw-semibold">Recent activity</div>
+        <ul class="list-group list-group-flush">
+          {% for m in recent %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span
+              >{{ m.part.name }}
+              <span class="text-muted small"
+                >· {{ m.get_reason_display }}{% if m.job_reference %} · {{
+                m.job_reference }}{% endif %}</span
+              >
+            </span>
+            <span
+              class="{% if m.quantity > 0 %}text-success{% else %}text-danger{% endif %} fw-semibold"
+            >
+              {{ m.quantity|floatformat:"-2" }}
+            </span>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">No activity yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endblock %} {% block scripts %} {{ chart_data|json_script:"chart-data" }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script>
+    const data = JSON.parse(document.getElementById("chart-data").textContent);
+    new Chart(document.getElementById("usageChart"), {
+      type: "bar",
+      data: {
+        labels: data.labels,
+        datasets: [
+          { label: "Used", data: data.values, backgroundColor: "#0d6efd" },
+        ],
+      },
+      options: { plugins: { legend: { display: false } } },
+    });
+  </script>
+  {% endblock %}
+</div>

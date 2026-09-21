@@ -1,7 +1,5 @@
 from django.db import models
-
-# Create your models here.
-
+from django.utils import timezone
 from django.conf import settings
 from django.db.models import Sum
 
@@ -11,6 +9,11 @@ class Part(models.Model):
         PART = "part", "Spare part"
         PAINT = "paint", "Paint"
         CONSUMABLE = "consumable", "Consumable"
+        
+    @property
+    def current_price(self):
+        latest = self.prices.first()          # newest, because of Meta.ordering
+        return latest.price if latest else self.unit_cost
 
     name = models.CharField(max_length=200)
     part_number = models.CharField(max_length=100, blank=True)  # or paint code
@@ -53,3 +56,39 @@ class StockMovement(models.Model):
 
     def __str__(self):
         return f"{self.part.name}: {self.quantity:+} ({self.reason})"
+    
+class PriceRecord(models.Model):
+    part = models.ForeignKey(Part, on_delete=models.CASCADE, related_name="prices")
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    supplier = models.CharField(max_length=200, blank=True)
+    recorded_at = models.DateField(default=timezone.localdate)
+    note = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        ordering = ["-recorded_at", "-id"]   # newest first
+
+    def __str__(self):
+        return f"{self.part.name}: {self.price} on {self.recorded_at}"
+    
+class Order(models.Model):
+    class Status(models.TextChoices):
+        ORDERED = "ordered", "Order Placed"
+        RECEIVED = "received", "Received"
+        CANCELLED = "cancelled", "Cancelled"
+        OVERDUE = "overdue", "Overdue"
+
+    part = models.ForeignKey(Part, on_delete=models.CASCADE, related_name="orders")
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    supplier = models.CharField(max_length = 200, blank=True)
+    ordered_on = models.DateField(default=timezone.localdate)
+    expected_date = models.DateField(null=True,blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices)
+    note = models.CharField(max_length=400, blank=True)
+    
+    @property
+    def is_overdue(self):
+        return (
+            self.status == self.Status.OVERDUE
+            and self.expected_date is not None
+            and self.expected_date < timezone.localdate()
+            )

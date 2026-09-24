@@ -5,7 +5,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import DecimalField, F, Sum, Value
+from django.db.models import DecimalField, F, Sum, Value, Q
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
@@ -54,3 +54,28 @@ def dashboard(request):
         "recent": recent,
     }
     return render(request, "inventory/dashboard.html", context)
+
+
+
+@login_required
+def part_list(request):
+    query = request.GET.get("q", "").strip()
+
+    parts = Part.objects.annotate(
+        total=Coalesce(
+            Sum("movements__quantity"),
+            Value(Decimal("0")),
+            output_field=DecimalField(),
+        )
+    ).order_by("name")
+
+    if query:
+        parts = parts.filter(
+            Q(name__icontains=query) | Q(part_number__icontains=query) | Q(id__iexact=query)
+        )
+
+    context = {
+        "parts": parts,
+        "query": query,
+    }
+    return render(request, "inventory/parts.html", context)

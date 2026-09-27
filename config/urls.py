@@ -22,5 +22,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", views.dashboard, name="dashboard"),
     path("parts/", views.part_list, name="part_list"),
-    
+    path("parts/<int:pk>/", views.part_detail, name="part_detail"),
+   path("parts/<int:pk>/adjust/", views.adjust_stock, name="adjust_stock"),
 ]

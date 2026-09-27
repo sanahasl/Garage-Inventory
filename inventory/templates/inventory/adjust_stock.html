@@ -1,0 +1,32 @@
+{% extends "inventory/base.html" %}
+{% block content %}
+<h1 class="h3">{{ part.name }}</h1>
+<p class="text-muted">Currently in stock: <strong>{{ part.stock_level }} {{ part.unit }}</strong></p>
+
+<form method="post" class="mt-4">
+  {% csrf_token %}
+
+  <div class="mb-4">
+    {% for radio in form.action %}
+      <label class="btn btn-outline-primary btn-lg me-2 mb-2">
+        {{ radio.tag }} {{ radio.choice_label }}
+      </label>
+    {% endfor %}
+  </div>
+
+  <div class="mb-3">
+    {{ form.quantity.label_tag }}
+    {{ form.quantity }}
+    {{ form.quantity.errors }}
+  </div>
+
+  <div class="mb-4">
+    {{ form.job_reference.label_tag }}
+    {{ form.job_reference }}
+  </div>
+
+  <button class="btn btn-success btn-lg w-100">Save</button>
+</form>
+
+<a href="{% url 'part_detail' part.pk %}" class="btn btn-link mt-3">Cancel</a>
+{% endblock %}

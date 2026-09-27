@@ -11,6 +11,11 @@ from django.utils import timezone
 
 from .models import Part, StockMovement
 
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect
+from .forms import StockAdjustForm
+from .models import Order, PriceRecord
+
 
 @login_required
 def dashboard(request):
@@ -79,3 +84,57 @@ def part_list(request):
         "query": query,
     }
     return render(request, "inventory/parts.html", context)
+
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect
+from .forms import StockAdjustForm
+from .models import Order, PriceRecord
+
+
+@login_required
+def part_detail(request, pk):
+    part = Part.objects.annotate(
+        total=Coalesce(
+            Sum("movements__quantity"),
+            Value(Decimal("0")),
+            output_field=DecimalField(),
+        )
+    ).get(pk=pk)
+
+    movements = part.movements.select_related("created_by").order_by("-created_at")[:15]
+    prices = part.prices.all()[:10]
+    orders = part.orders.all()
+
+    context = {
+        "part": part,
+        "movements": movements,
+        "prices": prices,
+        "orders": orders,
+    }
+    return render(request, "inventory/part_detail.html", context)
+
+
+@login_required
+def adjust_stock(request, pk):
+    part = get_object_or_404(Part, pk=pk)
+
+    if request.method == "POST":
+        form = StockAdjustForm(request.POST)
+        if form.is_valid():
+            qty = form.cleaned_data["quantity"]
+            taking_out = form.cleaned_data["action"] == "out"
+
+            StockMovement.objects.create(
+                part=part,
+                quantity=-qty if taking_out else qty,
+                reason="used" if taking_out else "received",
+                job_reference=form.cleaned_data["job_reference"],
+                created_by=request.user,
+            )
+            verb = "Removed" if taking_out else "Added"
+            messages.success(request, f"{verb} {qty} {part.unit} of {part.name}.")
+            return redirect("part_detail", pk=part.pk)
+    else:
+        form = StockAdjustForm()
+
+    return render(request, "inventory/adjust_stock.html", {"part": part, "form": form})

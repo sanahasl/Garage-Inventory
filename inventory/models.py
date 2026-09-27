@@ -3,6 +3,18 @@ from django.utils import timezone
 from django.conf import settings
 from django.db.models import Sum
 
+class PartManager(models.Manager):
+    def with_stock(self):
+        return self.annotate(
+            total=Coalesce(
+                Sum("movements__quantity"),
+                Value(Decimal("0")),
+                output_field=DecimalField(),
+            )
+        )
+
+
+
 
 class Part(models.Model):
     class Category(models.TextChoices):
@@ -35,6 +47,8 @@ class Part(models.Model):
     @property
     def needs_reorder(self):
         return self.stock_level <= self.min_level
+    
+    objects = PartManager()
 
 
 class StockMovement(models.Model):
@@ -92,3 +106,4 @@ class Order(models.Model):
             and self.expected_date is not None
             and self.expected_date < timezone.localdate()
             )
+        

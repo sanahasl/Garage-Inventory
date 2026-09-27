@@ -1,0 +1,91 @@
+{% extends "inventory/base.html" %}
+{% load inventory_extras %}
+{% block content %}
+
+{% stock_status part as s %}
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h1 class="h3 mb-1">{{ part.name }}</h1>
+    <div class="text-muted">#{{ part.id }} · {{ part.part_number|default:"-" }} · {{ part.get_category_display }}</div>
+  </div>
+  <span class="badge {{ s.badge }} fs-6">{{ s.label }}</span>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    {% if part.photo %}
+      <img src="{{ part.photo.url }}" class="img-fluid rounded shadow-sm mb-3" alt="{{ part.name }}">
+    {% endif %}
+
+    <div class="card shadow-sm {{ s.border }}">
+      <div class="card-body text-center">
+        <div class="text-muted small">Current stock</div>
+        <div class="display-6 fw-bold">{{ part.total|floatformat:"-2" }} {{ part.unit }}</div>
+        <div class="text-muted small mb-3">Minimum: {{ part.min_level|floatformat:"-2" }}</div>
+        <a href="{% url 'adjust_stock' part.pk %}" class="btn btn-primary btn-lg w-100">
+          Adjust stock
+        </a>
+      </div>
+    </div>
+
+    <dl class="row small mt-3">
+      <dt class="col-5">Location</dt><dd class="col-7">{{ part.location|default:"-" }}</dd>
+      <dt class="col-5">Supplier</dt><dd class="col-7">{{ part.supplier|default:"-" }}</dd>
+      <dt class="col-5">Current price</dt><dd class="col-7">{{ part.current_price|default:"-" }}</dd>
+    </dl>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header fw-semibold">Recent stock movements</div>
+      <ul class="list-group list-group-flush">
+        {% for m in movements %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>
+              {{ m.created_at|date:"d M Y, H:i" }}
+              <span class="text-muted small">· {{ m.get_reason_display }}{% if m.job_reference %} · {{ m.job_reference }}{% endif %}</span>
+            </span>
+            <span class="{% if m.quantity > 0 %}text-success{% else %}text-danger{% endif %} fw-semibold">
+              {{ m.quantity|floatformat:"-2" }}
+            </span>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted">No movements yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+      <div class="card-header fw-semibold">Price history</div>
+      <ul class="list-group list-group-flush">
+        {% for pr in prices %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ pr.recorded_at }} {% if pr.supplier %}· {{ pr.supplier }}{% endif %}</span>
+            <span class="fw-semibold">{{ pr.price }}</span>
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted">No price history yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-header fw-semibold">Orders</div>
+      <ul class="list-group list-group-flush">
+        {% for o in orders %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>
+              {{ o.quantity }} {{ part.unit }} · {{ o.get_status_display }}
+              {% if o.expected_date %}· expected {{ o.expected_date }}{% endif %}
+            </span>
+            {% if o.is_overdue %}<span class="badge bg-danger">Overdue</span>{% endif %}
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted">No orders yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,4 +1,4 @@
-{% extends "inventory/base.html" %} 
+{% extends "inventory/base.html" %}
 {% load inventory_extras %} 
 {% block content %}
 <h1 class="h3 mb-4">Parts</h1>
@@ -18,23 +18,30 @@
 
 <div class="row g-3">
   {% for p in parts %} {% stock_status p as s %}
+
   <div class="col-12 col-md-6 col-lg-4">
     <div class="card shadow-sm h-100 {{ s.border }}">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-start">
-          <h5 class="card-title mb-1">{{ p.name }}</h5>
-          <span class="badge {{ s.badge }}">{{ s.label }}</span>
+     
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <h5 class="card-title mb-1">{{ p.name }}</h5>
+            <span class="badge {{ s.badge }}">{{ s.label }}</span>
+          </div>
+          <div class="text-muted small mb-2">
+            #{{ p.part_number|default:"-" }}
+          </div>
+          <div class="fs-4 fw-bold">
+            {{ p.total|floatformat:"-2" }} {{ p.unit }}
+          </div>
+          <div class="text-muted small">
+            Minimum: {{ p.min_level|floatformat:"-2" }}
+          </div>
+          <a
+          href="{% url 'part_detail' p.id %}"
+          class="btn btn-sm btn-outline-primary mt-2"
+          style="text-decoration: none; color: inherit"
+        >View</a>
         </div>
-        <div class="text-muted small mb-2">
-          #{{ p.part_number|default:"-" }}
-        </div>
-        <div class="fs-4 fw-bold">
-          {{ p.total|floatformat:"-2" }} {{ p.unit }}
-        </div>
-        <div class="text-muted small">
-          Minimum: {{ p.min_level|floatformat:"-2" }}
-        </div>
-      </div>
     </div>
   </div>
   {% empty %}
